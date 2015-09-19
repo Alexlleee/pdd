@@ -1,0 +1,11 @@
+*
+!.gitignore
+!settings.py
+!runserver.py
+!requirements.txt
+!api/
+!api/**/
+!api/**/*.py
+!pddtest/
+!pddtest/**/
+!pddtest/**/*.py
