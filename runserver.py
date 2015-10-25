@@ -14,8 +14,7 @@ logger = logging.getLogger('API: runserver')
 class PddApplication(object):
     def __init__(self):
         self.static_path = 'static'
-        self.request = {
-        }
+        self.requests = {}
 
     def get_from_static(self, start_response, url):
         """
@@ -55,7 +54,7 @@ class PddApplication(object):
         try:
             if path.startswith('/socket.io'):
                 ws_namespaces = settings.NAMESPACES.copy()
-                socketio_manage(environ, ws_namespaces, self.request)
+                socketio_manage(environ, ws_namespaces, self.requests)
             else:
                 return self.get_from_static(start_response, path)
             return
