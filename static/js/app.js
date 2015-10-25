@@ -1,236 +1,160 @@
-var CODES = {
-	GET_QUESTION: 'get_question',
-	GET_RESULTS: 'get_results',
-	GET_START: 'get_start',
-	SEND_START: 'on_start',
-	SEND_QUESTION: 'on_question'
-};
+(function () {
 
+    var testSocket = io.connect('http://192.168.1.4:12000/test');
 
-var initTest = {
-	code: 'get_start',
-	success: true
-};
+    var App = {
 
-var test = [
-    {
-    	code: 'get_question',
-        success: true,
-        number: 1,
-        question: "What is your name?",
-        variants: {
-            1: "Alex",
-            2: "Eugen",
-            3: "Max",
-            4: "Nikita",
-            5: "Sergey"
+        test: null,
+        length: 0,
+        questionId: 0,
+        answers: {},
+
+        /**
+         *
+         * @param test [ {
+         *                 chapter_num: 1,
+         *                 question: 'blabla',
+         *                 variants: {
+         *                      1: 'text1',
+         *                      2: 'text',
+         *                      3: 'text'
+         *                 },
+         *                 href: 'http:/blablabla.com/blabla'
+         *             } ]
+         */
+        initTest: function (test) {
+            var me = this,
+                answers = me.answers;
+            me.test = JSON.parse(test);
+            me.length = me.test.length;
+            me.questionId = 0;
+            for (var i = 1; i <= me.length; ++i) {
+                answers[i] = 2;
+            }
         },
-        answers: {
-        	1: 2,
-        	2: 2,
-        	3: 2
-        }
-    },
-    {
-    	code: 'get_question',
-        success: true,
-        number: 2,
-        question: "What is your age?",
-        variants: {
-            1: "< 10",
-            2: "10-20",
-            3: "20-30",
-            4: "30-40",
-            5: "40-50",
-            6: "> 50"
+
+        startTest: function () {
+            var me = this;
+            $(".start").fadeOut();
+            me.updateQuiz(me.getCurrentQuiz(me.test, me.questionId, me.answers));
         },
-        answers: {
-        	1: 1,
-        	2: 2,
-        	3: 2
-        }
-    },
-    {
-    	code: 'get_question',
-        success: true,
-        number: 3,
-        question: "What is your sex?",
-        variants: {
-            1: "Male",
-            2: "Female"
+
+        getCurrentQuiz: function (test, index, answers) {
+            var quiz = test[index];
+            return {
+                chapterNumber: quiz.chapter_num,
+                number: index + 1,
+                question: quiz.question,
+                variants: quiz.variants,
+                link: quiz.href,
+                answers: answers
+            }
         },
-        answers: {
-        	1: 1,
-        	2: 0,
-        	3: 2
-        }
-    },
-];
 
-var results = {
-	code: 'get_results',
-	success: true,
-	completed: true,
-	answers: {
-		1: 1,
-		2: 0,
-		3: 1
-	}
-};
+        nextQuestion: function (prevResult) {
+            var me = this;
+            me.answers[me.questionId + 1] = prevResult ? 1 : 0;
+            ++me.questionId;
+            me.updateQuiz(me.getCurrentQuiz(me.test, me.questionId, me.answers));
+        },
 
-var ResponseManager = {
-	process: function (response) {
-		if (!response.success) {
-			throw("Server error!");
-			alert("Server error!");
-		} else if (response.code === CODES.GET_START) {
-			App.startTest(response);
-		} else if (response.code === CODES.GET_QUESTION) {
-			App.updateQuiz(response);
-		} else if (response.code === CODES.GET_RESULTS) {
-			App.finishTest(response);
-		}
-	}
-};
+        updateQuiz: function (quiz) {
+            var me = this,
+                quizDiv = $('.quiz');
+            quizDiv.fadeOut(500);
+            setTimeout(function () {
+                me.updateQuestion(quizDiv, quiz.question, quiz.number);
+                me.updateVariants(quizDiv, quiz.variants, quiz.number);
+                me.updateAnswers(quizDiv, quiz.answers, quiz.number);
+            }, 500);
+            quizDiv.fadeIn(500);
+        },
 
-var SocketHelper = {
+        updateQuestion: function (quiz, question, questionId) {
+            quiz.find('.question').html('<h4><span class="label label-warning questionId">' + questionId + '</span> ' + question + '</h4>');
+        },
 
-	// TODO: remove, just for emulation
-	questionNumber: 0,
-
-	init: function (request) {
-		var me = this;
-		// send to server init message
-
-		// TODO: remove - server emulation
-		setTimeout (function () {
-			me.get(initTest);
-		}, 200);
-	},
-
-	send: function (request) {
-		var  me = this;
-		// send request
-
-		// TODO: remove - server emulation
-		setTimeout (function () {
-			if (me.questionNumber != test.length) {
-				me.get(test[me.questionNumber]);
-				++me.questionNumber;
-			} else {
-				me.get(results);
-			}
-		}, 200);
-	},
-
-	get: function (response) {
-		ResponseManager.process(response);
-	}
-};
-
-var RequestBuilder = {
-
-	buildInitRequest: function (testType) {
-		return {
-			code: CODES.SEND_START,
-			testType: testType
-		};
-	},
-
-	buildQuestionSubmitRequest: function (questionId, answerId) {
-		return {
-			code: CODES.SEND_QUESTION,
-			questionId: questionId,
-			answerId: answerId
-		};
-	},
-
-	buildFirstQuestionRequest: function () {
-		return {
-			code: CODES.SEND_QUESTION
-		}
-	}
-
-};
-
-var App = {
-
-    startTest: function () {
-        var me = this;
-        $(".start").fadeOut(500);
-
-        SocketHelper.send(RequestBuilder.buildFirstQuestionRequest());
-    },
-
-
-    updateQuiz: function (response) {
-        var me = this,
-        	quiz = $('.quiz');
-        quiz.fadeOut(500);
-        setTimeout(function () {
-        	me.updateQuestion(quiz, response.question, response.number);
-        	me.updateVariants(quiz, response.variants, response.number);
-            me.updateAnswers(quiz, response.answers, response.number);
-        }, 500);
-        quiz.fadeIn(500);
-    },
-
-    updateQuestion: function (quiz, question, questionId) {
-        quiz.find('.question').html('<h3><span class="label label-warning questionId">' + questionId + '</span> ' + question + '</h3>');	
-    },	
-
-    updateVariants: function (quiz, variants, questionId) {
-    	var variantsDiv = quiz.find('.variants');
+        updateVariants: function (quiz, variants, questionId) {
+            var variantsDiv = quiz.find('.variants');
             variantsDiv.html("");
-        for (var key in variants) {
-            variantsDiv
-                .append($('<label class="btn btn-lg btn-primary btn-block element-animation"></label>')
-                    .append($('<span class="btn-label"><i class="glyphicon glyphicon-chevron-right"></i></span>'))
-                    .append($('<input type="radio" name="answer">').val(key))
-                    .append(variants[key])
-                    .on('click', function () {
-                        var answer = $(this).find('input:hidden').val();
-                        var request = RequestBuilder.buildQuestionSubmitRequest(answer, questionId);
-                        SocketHelper.send(request);
-                    })
-            );
-        }
-    },
+            for (var key in variants) {
+                variantsDiv
+                    .append($('<label class="btn btn-primary btn-block element-animation"></label>')
+                        .append($('<span class="btn-label"><i class="glyphicon glyphicon-chevron-right"></i></span>'))
+                        .append($('<input type="hidden" name="answer">').val(key))
+                        .append(variants[key])
+                        .on('click', function () {
+                            var answer = $(this).find('input:hidden').val();
+                            testSocket.emit('UPDATE', questionId - 1, answer);
+                        })
+                );
+            }
+        },
 
-    updateAnswers: function (quiz, answers, questionId) {
-    	var me = this,
-    		answersDiv = quiz.find('.answers');
+        updateAnswers: function (quiz, answers, questionId) {
+            var me = this,
+                answersDiv = quiz.find('.answers');
             answersDiv.html("");
-        for (var key in answers) {
-        	var answer = answers[key],
-        		answerClass = me.getAnswerButtonClass(parseInt(key), answer, questionId);
-        	answersDiv.append($('<label class="btn-sm ' +  answerClass + '">' + key + '</label>'));
+            for (var key in answers) {
+                var answer = answers[key],
+                    answerClass = me.getAnswerButtonClass(parseInt(key), answer, questionId);
+                answersDiv.append($('<label class="btn-sm ' + answerClass + '">' + key + '</label>'));
+            }
+        },
+
+        getAnswerButtonClass: function (questionNumber, answer, currentQuestionNumber) {
+            return questionNumber === currentQuestionNumber ? 'btn-warning' :
+                    answer === 0 ? 'btn-danger' :
+                    answer === 1 ? 'btn-success' : 'btn-default';
+        },
+
+        finishTest: function (result) {
+            var me = this,
+                answers = me.answers;
+            if (!result) {
+                answers[me.questionId + 1] = 0;
+            }
+            $('.quiz').fadeOut(1000);
+            setTimeout(function () {
+                var finalDiv = $('.final'),
+                    congratulationsDiv = finalDiv.find('.congratulations');
+                congratulationsDiv.html(result ? "<h2>Congratulations! <br/>You have passed the test!</h2>"
+                                               : "<h2>Looser! <br/>You have failed the test!</h2>");
+                me.updateAnswers(finalDiv, answers, -1);
+                finalDiv.fadeIn(500);
+            }, 1000);
+        },
+
+        error: function (msg) {
+            $('.quiz').fadeOut();
+            alert(msg);
         }
-    },
+    };
 
-    getAnswerButtonClass: function (questionNumber, answer, currentQuestionNumber) {
-    	return questionNumber === currentQuestionNumber ? 'btn-warning' : 
-    			answer === 0 ? 'btn-danger' : 
-    			answer === 1 ? 'btn-success' : 'btn-default';
-    },
-
-    finishTest: function (response) {
-    	var me = this;
-        $('.quiz').fadeOut(1000);
-        setTimeout(function () {
-        	var finalDiv = $('.final');
-        	me.updateAnswers(finalDiv, response.answers, -1);
-        	finalDiv.fadeIn(500);
-        }, 1000);
-    }
-};
-
-
-$(function () {
-
-    $("#start").on('click', function () {
-    	SocketHelper.init(RequestBuilder.buildInitRequest());
+    // Обработка метода set (передаёт JSON данные с вопросами теста), msg - данные
+    testSocket.on('set', function (test) {
+        App.initTest(test);
+        App.startTest();
     });
 
-});
+    // Обработка метода update question_num - порядковый номер вопроса (нумерация начинается с 0), result - true или false
+    testSocket.on('update', function (question_num, result) {
+        App.nextQuestion(result);
+    });
 
+    // Обработка метода finish msg - true или false
+    testSocket.on('finish', function (result) {
+        App.finishTest(result);
+    });
+
+    // Обработка метода error, msg - сообщение об ошибке
+    testSocket.on('error', function (error) {
+        App.error(error);
+    });
+
+    $(function () {
+        $("#start").on('click', function () {
+            testSocket.emit('GET');
+        });
+    });
+})();
