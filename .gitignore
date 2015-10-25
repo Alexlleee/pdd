@@ -1,4 +1,5 @@
-*
+!static
+!index.html
 !.gitignore
 !settings.py
 !runserver.py

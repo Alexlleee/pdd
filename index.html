@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Driver Test</title>
+
+    <link rel="shortcut icon" type="image/x-icon" href="static/images/logomin.png">
+
+    <link rel="stylesheet" type="text/css" href="static/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="static/css/bootstrap-theme.min.css">
+    <link rel="stylesheet" type="text/css" href="static/css/general.css">
+    <link rel="stylesheet" type="text/css" href="static/css/style.css">
+
+    <script src="static/js/jquery-1.11.1.min.js"></script>
+    <script src="static/js/bootstrap.min.js"></script>
+    <script src="static/js/app.js"></script>
+
+</head>
+<body>
+
+<div class="jumbotron vertical-center start">
+    <div class="container">
+        <div class="text-center">
+            <button id="start" class="btn btn-large btn-primary" type="button"> 
+                Start <span class="glyphicon glyphicon-play"/> 
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid bg-info quiz" style="display: none">
+
+    <div class="modal-dialog">
+
+        <div class="modal-content">
+
+            <div class="modal-header question"></div>
+
+            <div class="modal-body">
+
+                <div class="variants" data-toggle="buttons"></div>
+
+            </div>
+
+        </div>
+
+        <div class="modal-footer">
+            <div class="answers btn-group"></div>
+        </div>
+
+    </div>
+
+</div>
+
+<div class="jumbotron vertical-center final" style="display: none">
+    <div class="container">
+        <div class="text-center">
+            <h2>Congratulations! <br/>You have passed the test!</h2>
+            <br/> Your answers:
+            <br/>
+            <div class="answers btn-group"></div>
+        </div>
+    </div>
+</div>
+
+
+</body>
+</html>
