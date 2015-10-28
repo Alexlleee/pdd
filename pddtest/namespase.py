@@ -33,12 +33,10 @@ class PddTestNamespace(MainNamespace):
             result = self.pdd_test.is_right_variant(question_index, variant)
             self.emit('update', question_index, result)
         except TestFailed:
-            self.emit('update', question_index, False)
             self.emit('finish', False)
             self.pdd_test = None
         except TestSuccess:
-            self.emit('update', question_index, True)
             self.emit('finish', True)
             self.pdd_test = None
         except Exception as err:
-            self.emit('error', err)
+            self.emit('error', str(err))

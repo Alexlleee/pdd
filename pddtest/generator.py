@@ -6,6 +6,17 @@ import random
 REDIS_HOST = '127.0.0.1'
 REDIS_PORT = '6379'
 
+PART_CHAPTER_DICT = {
+    1: (1, 25),
+    2: (25, 114),
+    3: (115, 212),
+}
+
+def get_part(chapter):
+    for part, chapter_range in PART_CHAPTER_DICT.items():
+        if chapter in range(chapter_range[0], chapter_range[1]):
+            return part
+
 def generate_test(parts=[1, 2, 3, 4, 5, 6, 7], length=10, login=None):
     from pddtest.resource import PddQuestion, PddTestWSResource
     server = redis.Redis(REDIS_HOST, REDIS_PORT)
@@ -29,30 +40,44 @@ def generate_test(parts=[1, 2, 3, 4, 5, 6, 7], length=10, login=None):
     pdd_test_resource = PddTestWSResource(questions)
     return pdd_test_resource
 
-def add_question_to_db(question, variants, right_variant_index, chapter_num, href=None):
+def add_question_to_db(question_str, variants, right_variant_index, chapter_num, href=None):
+    from pddtest.resource import PddQuestion
     server = redis.Redis(REDIS_HOST, REDIS_PORT)
-    question = PddQuestion(question, variants, right_variant_index, chapter_num, href=href)
-    return server.sadd('chapter.{}.question'.format(int(float(chapter_num))), question.to_dict())
+    question = PddQuestion(question_str, variants, right_variant_index, chapter_num, href=href)
+    chapter_num_int = int(float(chapter_num))
+    return server.sadd('chapter.{}.question'.format(get_part(chapter_num_int)), question.to_dict())
 
 def store_answer(login, chapter, result):
     server = redis.Redis(REDIS_HOST, REDIS_PORT)
     server.incr('{}.{}.{}'.format(login, int(float(chapter)), result))
 
-if __name__ == '__main__':
-    # pdd_test_generator = PddTestGenerator()
-    res = generate_test([2])
-    print(res.to_json())
-    res = res.is_right_variant(0, 2)
-    # res = pdd_test_generator.add_question_to_db(
-    #     u'Является ли водителем лицо, обучаемое управлению механическим транспортным средством?',
-    #     {
-    #         1: u'Не является',
-    #         2: u'Является только при движении учебного транспортного средства по автодрому или площадке, закрытой для дорожного движения',
-    #         3: u'Является только при движении учебного транспортного средства по дорогам общего пользования',
-    #         4: u'Является только при нахождении в учебном транспортном средстве',
-    #     },
-    #     1,
-    #     2.8,
-    #     'http://pdd.by/pdd/ru/2.8/#i2.8',
-    # )
+def get_question_count():
+    server = redis.Redis(REDIS_HOST, REDIS_PORT)
+    return {k: len(server.smembers('chapter.{}.question'.format(k))) for k in PART_CHAPTER_DICT.keys()}
+
+def main():
+    s = u'''Что должен делать водитель при ослеплении?
+Включить аварийную световую сигнализацию и, не перестраиваясь, снизить скорость и остановиться.
+Не перестраиваясь, остановиться и включить аварийную сигнализацию.
+Включить аварийную сигнализацию, перестроиться на правую полосу и остановиться.
+Включить аварийную сигнализацию, съехать на обочину и остановиться.
+Перестроиться на правую полосу, включить аварийную сигнализацию, снизить скорость и остановиться.
+    '''
+    question = s.split('\n')[0]
+    variants_list = [item.replace('\n', '') for item in s.split('\n')[1:]]
+    chapter = 163.1
+    right = 4
+    variants_list = [item.replace('\n', '') for item in variants_list]
+    variants = {i + 1: x for i, x in enumerate(variants_list)}
+    res = add_question_to_db(
+        question,
+        variants,
+        right,
+        chapter,
+        'http://pdd.by/pdd/ru/{chapter}/#i{chapter}'.format(chapter=chapter),
+    )
     print(res)
+    print(get_question_count())
+
+if __name__ == '__main__':
+    main()
